@@ -15,37 +15,65 @@ def create_soup(url):
     soup = BeautifulSoup(res.text, "lxml") # res.text를 통해 가져온 HTML 문서를 lxml 파서를 통해서 BeautifulSoup 객체로 만들어 줌
     return soup
 
-def scrape_suncheon():
-    url = "https://www.tripadvisor.co.kr/Attraction_Review-g1074108-d6847906-Reviews-Yeosu_Ocean_Rail_Bike-Yeosu_Jeollanam_do.html"
+def scrape_image_link(link, image_link): # 이미지 크롤링
+    url = link
     res = requests.get(url, headers={'User-Agent':'Mozilla/5.0'})
     res.raise_for_status()
     soup = BeautifulSoup(res.text, "lxml")
     soup = create_soup(url)
-    news_list = soup.find("div", attrs={"class" : "ui_columns is-multiline is-mobile"})
-    arr=[] # title 하고 link 정보  attrs : 속성값 모두 출력
-    image_link=[] 
-    article=[]
-    print(news_list)
+    try:
+        new_image_link = soup.find("div", attrs={"class" : "ssrcss-ab5fd8-StyledFigureContainer e34k3c21"}).find("img")["src"]
+        image_link.append(new_image_link)
+    except:
+        try:
+            display = Display(visible=0, size=(1920, 1080))
+            display.start()
+            path = '/home/ubuntu/chromedriver'
+            s=Service(path)
+            driver = webdriver.Chrome(service=s)
+            driver.get(url)
+            driver.switch_to.frame(driver.find_element(By.XPATH, '//*[@id="smphtml5iframebbcMediaPlayer0"]'))
+            image = driver.find_element(By.XPATH, '//*[@id="mediaContainer"]/img').get_attribute('src')
+            driver.switch_to.default_content()
+            image_link.append(image)
+            driver.quit()
+            display.stop()
+        except:
+            image_link.append('https://search.pstatic.net/sunny/?src=https%3A%2F%2Fimage.utoimage.com%2Fpreview%2Fcp952602%2F2021%2F05%2F202105018297_500.jpg&type=sc960_832')
 
-    '''
-    for news in enumerate(news_list):
-        title = news.find("a").get_text().strip() # strip 앞뒤 공백제거 get_text 하위태그 제거하고 유니코드 텍스드문자열 반환
-        link = url.replace('/news', '')+news.find("a")["href"]
+
+def scrape_suncheon(): # 여행지 크롤링
+    url = "https://trip.place.naver.com/list?query=%EC%88%9C%EC%B2%9C%20%EA%B0%80%EB%B3%BC%EB%A7%8C%ED%95%9C%EA%B3%B3&level=top&zoomLevel=10.000"
+    res = requests.get(url, headers={'User-Agent':'Mozilla/5.0'})
+    res.raise_for_status()
+    soup = BeautifulSoup(res.text, "lxml")
+    soup = create_soup(url)
+    suncheon_list = soup.find("ol", attrs={"class" : "gel-layout__item gs-u-float-left@l"}).find_all("li")
+
+    arr=[]
+    image_link=[]
+    name=[]
+    for tour in enumerate(suncheon_list):
+        title = tour.find("a").get_text().strip() # strip 앞뒤 공백제거 get_text 하위태그 제거하고 유니코드 텍스드문자열 반환
+        link = url.replace('/https://trip.place.naver.com/list?query=%EC%88%9C%EC%B2%9C%20%EA%B0%80%EB%B3%BC%EB%A7%8C%ED%95%9C%EA%B3%B3&level=top&zoomLevel=10.000', '')+tour.find("a")["href"]
         #scrape_image_link(link, image_link)
-        scrape_content(link, article)
+        scrape_content(link, name)
         arr.append(title + '\n' + link + '\n')
-    '''
-    '''
-    arr=[] # title 하고 link 정보  attrs : 속성값 모두 출력
-    image_link=[] 
-    article=[]
-    for news in enumerate(news_list):
-        title = news.find("a").get_text().strip() # strip 앞뒤 공백제거 get_text 하위태그 제거하고 유니코드 텍스드문자열 반환
-        link = url.replace('/news', '')+news.find("a")["href"]
-        scrape_image_link(link, image_link)
-        scrape_content(link, article)
-        arr.append(title + '\n' + link + '\n')
-    '''
+
+    if os.path.exists('suncheon.txt'):
+        os.remove('suncheon.txt')
+    
+
+    suncheon_fp = open('suncheon.txt','w',encoding='utf-8')
+    for i in range(len(arr)):
+        bbc_fp.writelines(arr[i])
+
+    for i in range(len(image_link)):
+        bbc_fp.writelines(image_link[i] + '\n')
+    
+    suncheon_fp.close()
 
 if __name__ == "__main__":
-    scrape_suncheon()
+    scrape_news()
+    
+    '''
